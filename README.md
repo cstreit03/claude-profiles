@@ -2,6 +2,8 @@
 
 Run separate, fully isolated Claude Desktop and Claude Code profiles (for example, Work and Personal) on one Mac. Each profile has its own login, chats, settings, projects, connectors, and Claude Code configuration, plus its own logo, Spotlight launcher, and Desktop shortcut.
 
+All logos are the property of their respective owners.
+
 > This uses Electron's `--user-data-dir` flag and Claude Code's `CLAUDE_CONFIG_DIR` environment variable. It is a community workaround, not an officially supported Claude feature.
 
 ## What is in the package
