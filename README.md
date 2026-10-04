@@ -2,9 +2,26 @@
 
 Run separate, fully isolated Claude Desktop and Claude Code profiles (for example, Work and Personal) on one Mac. Each profile has its own login, chats, settings, projects, connectors, and Claude Code configuration, plus its own logo, Spotlight launcher, and Desktop shortcut.
 
-All logos are the property of their respective owners.
-
 > This uses Electron's `--user-data-dir` flag and Claude Code's `CLAUDE_CONFIG_DIR` environment variable. It is a community workaround, not an officially supported Claude feature.
+
+## Disclaimer
+
+This is an unofficial, open-source community project. It is not affiliated with,
+endorsed by, sponsored by, or supported by Anthropic.
+
+"Claude" and the Claude logo are trademarks of Anthropic. They are used here
+only to describe the software this project works with. No logos or other Anthropic
+brand assets are included in this repository; any logos you use are your own.
+
+This project relies on undocumented behavior (Electron's `--user-data-dir` flag and
+Claude Code's `CLAUDE_CONFIG_DIR` environment variable) and may stop working if
+Claude Desktop or Claude Code changes. It does not modify your original Claude
+installation, but it does copy it and move it to a different folder.
+
+You are responsible for using Claude in line with Anthropic's terms of service and
+usage policies, including any rules about multiple accounts.
+
+This software is provided "as is," without warranty of any kind. Use at your own risk.
 
 ## What is in the package
 
