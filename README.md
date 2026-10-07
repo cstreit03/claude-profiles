@@ -136,6 +136,7 @@ The `--migrate-to` profile must be one of the profiles being created.
 | --- | --- |
 | A launcher or clone will not open after a logo change | Re-sign it: `codesign --force --deep -s - ~/Applications/Claude\ Work.app` |
 | Icons look outdated | Run `killall Finder Dock` |
+| A profile's logo reverts to the standard Claude icon | Claude's auto-updater replaced that profile's app copy. The launcher reapplies the logo the next time you open the profile through it; to fix it right away, rerun `./setup.sh` |
 | Icons look too big or too small next to other Dock icons | Adjust `ICON_ART` near the top of `setup.sh` (default `824`; lower is smaller) and rerun |
 | A second window opens instead of focusing the existing one | Approve the Automation and Accessibility prompts for the launcher |
 | `Claude.app not found` | Install Claude into `/Applications` and rerun |

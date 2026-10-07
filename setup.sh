@@ -209,14 +209,25 @@ EOF
 DATA="$DATA"
 CODE="$CODE"
 APP="$CLONE"
+ICON="$ICON"
+EOF
+  cat >> "$PROFILE/launch.sh" <<'EOF'
+
+# Claude's auto-updater replaces the whole clone, which drops the custom logo
+# (stored in the bundle's "Icon\r" file). Reapply it whenever it is missing.
+if [[ -n "$ICON" && -f "$ICON" && ! -e "$APP/Icon"$'\r' ]]; then
+  osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a) {
+    $.NSWorkspace.sharedWorkspace.setIconForFileOptions($.NSImage.alloc.initWithContentsOfFile(a[0]), a[1], 0) }' \
+    "$ICON" "$APP" > /dev/null 2>&1 && touch "$APP"
+fi
 
 # Main process only (helpers run a different binary, so they do not match)
-PID=\$(pgrep -f "Contents/MacOS/Claude --user-data-dir=\$DATA" | head -1)
+PID=$(pgrep -f "Contents/MacOS/Claude --user-data-dir=$DATA" | head -1)
 
-if [[ -n "\$PID" ]]; then
-  osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is \$PID) to true"
+if [[ -n "$PID" ]]; then
+  osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $PID) to true"
 else
-  open -n -a "\$APP" --env CLAUDE_CONFIG_DIR="\$CODE" --args --user-data-dir="\$DATA"
+  open -n -a "$APP" --env CLAUDE_CONFIG_DIR="$CODE" --args --user-data-dir="$DATA"
 fi
 EOF
   chmod +x "$PROFILE/launch.sh"
