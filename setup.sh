@@ -199,6 +199,7 @@ use framework "AppKit"
 set img to current application's NSImage's alloc()'s initWithContentsOfFile:"$ICON"
 current application's NSWorkspace's sharedWorkspace()'s setIcon:img forFile:"$CLONE" options:0
 EOF
+    /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$CLONE/Contents/Info.plist" > "$PROFILE/.icon-version" 2>/dev/null || true
   else
     echo "==> No logo for $NAME, keeping the standard icon"
   fi
@@ -206,19 +207,36 @@ EOF
   echo "==> Writing launch script"
   cat > "$PROFILE/launch.sh" <<EOF
 #!/bin/zsh
+TITLE="$TITLE"
 DATA="$DATA"
 CODE="$CODE"
 APP="$CLONE"
 ICON="$ICON"
+LOG="$PROFILE/launch.log"
+STAMP="$PROFILE/.icon-version"
 EOF
   cat >> "$PROFILE/launch.sh" <<'EOF'
 
+log() { print -r -- "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"; }
+
 # Claude's auto-updater replaces the whole clone, which drops the custom logo
-# (stored in the bundle's "Icon\r" file). Reapply it whenever it is missing.
-if [[ -n "$ICON" && -f "$ICON" && ! -e "$APP/Icon"$'\r' ]]; then
-  osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a) {
-    $.NSWorkspace.sharedWorkspace.setIconForFileOptions($.NSImage.alloc.initWithContentsOfFile(a[0]), a[1], 0) }' \
-    "$ICON" "$APP" > /dev/null 2>&1 && touch "$APP"
+# (stored in the bundle's "Icon\r" file). Reapply it when that file is missing
+# or the app version changed since the logo was last applied.
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Contents/Info.plist" 2>/dev/null)
+if [[ -n "$ICON" && -f "$ICON" ]] && [[ ! -e "$APP/Icon"$'\r' || "$(cat "$STAMP" 2>/dev/null)" != "$VERSION" ]]; then
+  # setIcon returns false instead of throwing when macOS blocks the write
+  # (App Management privacy setting), so turn that into a real error.
+  if osascript -l JavaScript -e 'ObjC.import("AppKit"); function run(a) {
+      const img = $.NSImage.alloc.initWithContentsOfFile(a[0])
+      if (!img || img.isNil() || !$.NSWorkspace.sharedWorkspace.setIconForFileOptions(img, a[1], 0)) throw new Error("setIcon was refused")
+    }' "$ICON" "$APP" >> "$LOG" 2>&1; then
+    print -r -- "$VERSION" > "$STAMP"
+    touch "$APP"
+    log "Reapplied logo (Claude $VERSION)"
+  else
+    log "Could not reapply logo to $APP. Allow \"Claude $TITLE\" in System Settings > Privacy & Security > App Management, or rerun setup.sh."
+    osascript -e "display notification \"Allow Claude $TITLE in Privacy & Security > App Management, or rerun setup.sh.\" with title \"Could not restore the Claude $TITLE logo\"" 2>/dev/null
+  fi
 fi
 
 # Main process only (helpers run a different binary, so they do not match)
