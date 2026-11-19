@@ -77,7 +77,8 @@ The first time a launcher focuses an already-running window, macOS asks to let i
    - `~/Applications/.claude-clones/Claude <Name>.app`, a copy of Claude with your logo
    - `~/Applications/Claude <Name>.app`, the Spotlight launcher (it has no Dock icon of its own)
 4. **Adds Desktop shortcuts.** Puts a **Claude Work** and **Claude Personal** shortcut on your Desktop, showing each profile's logo. Double-click to launch. Skip this with `--no-desktop`.
-5. **Adds aliases** to `~/.zshrc` inside a marked block, so reruns replace them instead of duplicating them.
+5. **Turns off Claude's built-in updater and installs a watchdog.** Claude's own updater replaces the app and relaunches it *without* the profile flag, which opens the default account (for example, Personal inside the Work app). Setup writes `disableAutoUpdates` to `/Library/Managed Preferences/com.anthropic.claudefordesktop.plist` (asks for your admin password; skip with `--keep-auto-update`). A LaunchAgent (`~/.claude-profiles/watchdog.sh`) also checks every few seconds for a profile app running without its profile, quits it, and relaunches it correctly.
+6. **Adds aliases** to `~/.zshrc` inside a marked block, so reruns replace them instead of duplicating them.
 
 ## Aliases
 
@@ -90,6 +91,22 @@ The first time a launcher focuses an already-running window, macOS asks to let i
 
 ## Launching
 
+Every launch through a shortcut, launcher, or `-app` alias:
+
+1. Checks claude.ai for the latest Claude release and, if it is newer, downloads it and verifies Anthropic's code signature.
+2. Rebuilds that profile's app copy when the version changed or its logo is missing. macOS will not let anything change the icon of an app that has already been launched, but a fresh copy accepts it, so the copy is rebuilt rather than patched.
+3. Quits that profile's app if it is running without its profile flag, and quits the hidden base copy (it has no profile, so it opens the default account).
+4. Throws away any update staged by Claude's built-in updater, which would otherwise install on quit and relaunch without the profile.
+5. Focuses the existing window, or launches with the profile and confirms it started with the right data folder. If an update is waiting while the profile is open, it asks before restarting.
+
+## Troubleshooting
+
+- **A profile shows a plain folder icon.** Claude's built-in updater replaced the app but left its "custom icon" flag behind. Launch from the shortcut once; the copy is rebuilt with its logo. If it still has no logo, see `~/.claude-<name>/launch.log`.
+- **A profile opened the other account.** Usually Claude's built-in updater relaunched it. Rerun `./setup.sh` so the updater is turned off and the watchdog is running (`launchctl print gui/$UID/com.claude-profiles.watchdog`).
+- **Signing in.** Sign-in returns to the app through a `claude://` link, and macOS sends it to whichever Claude copy it picks. Quit the other profiles before you sign in to a profile.
+
+Everything is logged in `~/.claude-<name>/launch.log`.
+
 Always launch through the Desktop shortcuts, Spotlight, Launchpad, the launchers in `~/Applications`, or the `-app` aliases. These pass the profile settings to Claude.
 
 Avoid opening anything inside `~/Applications/.claude-clones` directly, and do not choose **Options > Keep in Dock** on a running Claude icon. Both start Claude without the profile flag, which opens the default, unseparated profile.
@@ -98,11 +115,9 @@ If you pin a launcher to the Dock, you will see two icons while that profile run
 
 ## Updating Claude
 
-1. Download the latest Claude from claude.ai/download.
-2. Drag it into `/Applications` as usual.
-3. Run `./setup.sh` again from the package folder.
+Automatic: launching a profile installs the latest release (see **Launching**). Your logins, chats, and settings are not affected. If Claude ever asks to move itself back to the Applications folder, decline.
 
-The script hides the new copy, rebuilds both profiles from it, and reapplies your logos. Your logins, chats, and settings are not affected. If Claude ever asks to move itself back to the Applications folder, decline.
+If you install Claude into `/Applications` yourself, run `./setup.sh` again so it is hidden and used as the base copy.
 
 ## Options
 
@@ -111,6 +126,7 @@ The script hides the new copy, rebuilds both profiles from it, and reapplies you
 | `--migrate-to <profile>` | Copies your current Claude login, chats, and `~/.claude` into that profile (default: no migration) |
 | `--no-desktop` | Does not put shortcuts on the Desktop |
 | `--no-icon-pad` | Uses PNG logos as-is instead of padding them to Apple's icon size |
+| `--keep-auto-update` | Leaves Claude's built-in updater on (not recommended; the watchdog still corrects the relaunch) |
 | `profile ...` | Profiles to create (default: `work personal`) |
 | `-h`, `--help` | Shows usage |
 
@@ -136,7 +152,8 @@ The `--migrate-to` profile must be one of the profiles being created.
 | --- | --- |
 | A launcher or clone will not open after a logo change | Re-sign it: `codesign --force --deep -s - ~/Applications/Claude\ Work.app` |
 | Icons look outdated | Run `killall Finder Dock` |
-| A profile's logo reverts to the standard Claude icon | Claude's auto-updater replaced that profile's app copy. The launcher reapplies the logo the next time you open the profile through it. If macOS blocks that, you get a notification: allow **Claude <Name>** in System Settings > Privacy & Security > App Management, or rerun `./setup.sh`. Each attempt is logged in `~/.claude-<name>/launch.log` |
+| A profile's logo reverts to the standard icon or a folder | Quit that profile and open it from its shortcut; the launcher rebuilds the copy with the logo. See `~/.claude-<name>/launch.log` |
+| A profile opened in the wrong account | Something started it without its profile. The watchdog should catch this within seconds; check `~/.claude-profiles/watchdog.log`, and that `launchctl print gui/$UID/com.claude-profiles.watchdog` shows it running |
 | Icons look too big or too small next to other Dock icons | Adjust `ICON_ART` near the top of `setup.sh` (default `824`; lower is smaller) and rerun |
 | A second window opens instead of focusing the existing one | Approve the Automation and Accessibility prompts for the launcher |
 | `Claude.app not found` | Install Claude into `/Applications` and rerun |
@@ -155,6 +172,9 @@ rm -rf ~/Applications/.claude-clones
 rm -rf ~/Applications/Claude\ Work.app ~/Applications/Claude\ Personal.app
 rm -f ~/Desktop/Claude\ Work ~/Desktop/Claude\ Personal
 sed -i '' '/# >>> claude-profiles >>>/,/# <<< claude-profiles <<</d' ~/.zshrc
+launchctl bootout gui/$UID/com.claude-profiles.watchdog
+rm -rf ~/.claude-profiles ~/Library/LaunchAgents/com.claude-profiles.watchdog.plist
+sudo /usr/libexec/PlistBuddy -c "Delete :disableAutoUpdates" "/Library/Managed Preferences/com.anthropic.claudefordesktop.plist"
 ```
 
 Your profile data stays in `~/.claude-work` and `~/.claude-personal`. Delete those folders only if you no longer need the logins, chats, and settings inside them.
