@@ -4,6 +4,16 @@ Run separate, fully isolated Claude Desktop and Claude Code profiles (for exampl
 
 > This uses Electron's `--user-data-dir` flag and Claude Code's `CLAUDE_CONFIG_DIR` environment variable. It is a community workaround, not an officially supported Claude feature.
 
+## Screenshots
+
+Each profile gets its own Desktop shortcut and logo:
+
+<img src="screenshots/desktop-icons.png" alt="Claude Personal and Claude Work shortcuts on the Desktop, each with its own logo" width="400">
+
+Both profiles can run side by side, each with its own icon in the Dock:
+
+<img src="screenshots/dock-icons.png" alt="Claude Personal and Claude Work running side by side in the Dock" width="700">
+
 ## Disclaimer
 
 This is an unofficial, open-source community project. It is not affiliated with,
@@ -31,6 +41,7 @@ claude-profiles/
   claude-icon-work.png        Logo for the Work profile
   claude-icon-personal.png    Logo for the Personal profile
   README.md                   This file
+  screenshots/                Images used in this README
 ```
 
 Logos are optional. A profile without a matching `claude-icon-<profile>.png` (or `.icns`) keeps the standard Claude icon. Use square images, ideally 1024×1024.
